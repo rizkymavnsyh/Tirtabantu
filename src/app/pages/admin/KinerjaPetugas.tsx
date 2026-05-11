@@ -1,12 +1,46 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { kinerjaPetugas, penugasanList, laporanList } from "../../data/mockData";
-import { Award, TrendingUp, Star, MapPin, CheckCircle } from "lucide-react";
+import { Award, TrendingUp, Star, MapPin, CheckCircle, FileDown, FileText } from "lucide-react";
+import { exportToExcel, exportToPDF } from "../../utils/exportUtils";
 
 export function KinerjaPetugas() {
+  const handleExportExcel = () => {
+    const exportData = kinerjaPetugas.map((p) => ({
+      Nama_Petugas: p.nama,
+      Tugas_Selesai: p.selesai,
+      Tugas_Aktif: p.aktif,
+      Rata_Rata_Rating: p.rating_avg,
+    }));
+    exportToExcel(exportData, "Kinerja_Petugas_TirtaBantu");
+  };
+
+  const handleExportPDF = () => {
+    const columns = ["Nama Petugas", "Tugas Selesai", "Tugas Aktif", "Rata-Rata Rating"];
+    const rows = kinerjaPetugas.map(p => [
+      p.nama,
+      p.selesai.toString(),
+      p.aktif.toString(),
+      p.rating_avg.toString()
+    ]);
+    exportToPDF("Laporan Kinerja Petugas TirtaBantu", columns, rows, "Kinerja_Petugas_TirtaBantu");
+  };
+
   return (
     <div>
-      <h1 className="text-sky-900 mb-1" style={{ fontSize: "1.5rem", fontWeight: 700 }}>Kinerja Petugas Lapangan</h1>
-      <p className="text-slate-500 mb-6" style={{ fontSize: "0.85rem" }}>Laporan produktivitas dan kualitas layanan setiap petugas</p>
+      <div className="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-4">
+        <div>
+          <h1 className="text-sky-900 mb-1" style={{ fontSize: "1.5rem", fontWeight: 700 }}>Kinerja Petugas Lapangan</h1>
+          <p className="text-slate-500" style={{ fontSize: "0.85rem" }}>Laporan produktivitas dan kualitas layanan setiap petugas</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={handleExportExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors" style={{ fontSize: "0.85rem" }}>
+            <FileDown className="w-4 h-4" /> Export Excel
+          </button>
+          <button onClick={handleExportPDF} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors" style={{ fontSize: "0.85rem" }}>
+            <FileText className="w-4 h-4" /> Export PDF
+          </button>
+        </div>
+      </div>
 
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white rounded-xl p-6 border border-sky-100 shadow-sm">

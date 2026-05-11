@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { pembayaranList, laporanList, kategoriList, userList, Pembayaran } from "../../data/mockData";
 import { StatusBadge } from "./Dashboard";
-import { CreditCard, CheckCircle, XCircle, Eye, Plus, X } from "lucide-react";
+import { CreditCard, CheckCircle, XCircle, Eye, Plus, X, FileDown, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { pendapatanBulanan } from "../../data/mockData";
+import { exportToExcel, exportToPDF } from "../../utils/exportUtils";
 
 export function PembayaranAdmin() {
   const [data, setData] = useState<Pembayaran[]>([...pembayaranList]);
@@ -25,16 +26,52 @@ export function PembayaranAdmin() {
   const belumBayar = data.filter(p => p.status === "Belum Dibayar").reduce((s, p) => s + p.jumlah, 0);
   const menungguVerif = data.filter(p => p.status === "Menunggu Verifikasi").length;
 
+  const handleExportExcel = () => {
+    const exportData = data.map((p) => {
+      const user = getUser(p.user_id);
+      return {
+        ID_Laporan: p.laporan_id,
+        Pelanggan: user?.nama || "Unknown",
+        Deskripsi: p.deskripsi_biaya,
+        Jumlah: p.jumlah,
+        Jatuh_Tempo: p.tgl_jatuh_tempo,
+        Status: p.status,
+      };
+    });
+    exportToExcel(exportData, "Data_Pembayaran_TirtaBantu");
+  };
+
+  const handleExportPDF = () => {
+    const columns = ["ID Lap", "Pelanggan", "Deskripsi", "Jumlah (Rp)", "Jatuh Tempo", "Status"];
+    const rows = data.map(p => [
+      p.laporan_id.toString(),
+      getUser(p.user_id)?.nama || "Unknown",
+      p.deskripsi_biaya,
+      p.jumlah.toLocaleString("id-ID"),
+      p.tgl_jatuh_tempo,
+      p.status
+    ]);
+    exportToPDF("Data Pembayaran TirtaBantu", columns, rows, "Data_Pembayaran_TirtaBantu");
+  };
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-4">
         <div>
           <h1 className="text-sky-900" style={{ fontSize: "1.5rem", fontWeight: 700 }}>Kelola Pembayaran</h1>
           <p className="text-slate-500" style={{ fontSize: "0.85rem" }}>Verifikasi pembayaran dan kelola tagihan pelanggan</p>
         </div>
-        <button onClick={() => setShowCreateModal(true)} className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors" style={{ fontSize: "0.85rem" }}>
-          <Plus className="w-4 h-4" /> Buat Tagihan
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={handleExportExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors" style={{ fontSize: "0.85rem" }}>
+            <FileDown className="w-4 h-4" /> Export Excel
+          </button>
+          <button onClick={handleExportPDF} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors" style={{ fontSize: "0.85rem" }}>
+            <FileText className="w-4 h-4" /> Export PDF
+          </button>
+          <button onClick={() => setShowCreateModal(true)} className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors" style={{ fontSize: "0.85rem" }}>
+            <Plus className="w-4 h-4" /> Buat Tagihan
+          </button>
+        </div>
       </div>
 
       {/* Summary */}

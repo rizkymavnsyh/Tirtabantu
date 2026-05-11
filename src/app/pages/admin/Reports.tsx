@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { laporanList, kategoriList, userList, Laporan } from "../../data/mockData";
+import { laporanList, kategoriList, userList, Laporan, User } from "../../data/mockData";
 import { StatusBadge } from "./Dashboard";
 import { MapDisplay } from "../../components/MapView";
 import {
   Search, UserPlus, Eye, X, CheckCircle, XCircle, MapPin, Navigation, Clock,
-  AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown,
+  AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown, FileDown, FileText, ClipboardList
 } from "lucide-react";
+import { exportToExcel, exportToPDF } from "../../utils/exportUtils";
+import { toast } from "sonner";
 
 export function Reports() {
   const [data, setData] = useState<Laporan[]>([...laporanList]);
@@ -59,17 +61,57 @@ export function Reports() {
     setShowValidasiModal(null);
   };
 
-  const handleAssign = (laporanId: number, petugasId: number) => {
+  const handleAssign = (laporanId: number, petugasId: number, catatan: string) => {
     setData(data.map((l) =>
       l.id === laporanId ? { ...l, status: "Ditugaskan" as const } : l
     ));
     setShowAssignModal(null);
+    toast.success(`Work Order untuk Laporan #${laporanId} berhasil dibuat dan ditugaskan.`);
+  };
+
+  const handleExportExcel = () => {
+    const exportData = filtered.map((l) => ({
+      ID: l.id,
+      Pelapor: getUser(l.user_id)?.nama || "Unknown",
+      Kategori: getKategori(l.kategori_id)?.nama || "Unknown",
+      Alamat: `${l.alamat_lengkap} No. ${l.no_rumah}, ${l.rt_rw}, ${l.kelurahan}`,
+      Status: l.status,
+      Tanggal: l.tgl_lapor,
+      TurunLapangan: l.perlu_turun_lapangan ? "Ya" : l.perlu_turun_lapangan === false ? "Tidak" : "Belum",
+    }));
+    exportToExcel(exportData, "Data_Laporan_TirtaBantu");
+  };
+
+  const handleExportPDF = () => {
+    const columns = ["ID", "Pelapor", "Kategori", "Alamat", "Tanggal", "Status", "Turun Lapangan"];
+    const rows = filtered.map(l => [
+      l.id.toString(),
+      getUser(l.user_id)?.nama || "Unknown",
+      getKategori(l.kategori_id)?.nama || "Unknown",
+      `${l.alamat_lengkap} No. ${l.no_rumah}, ${l.kelurahan}`,
+      l.tgl_lapor,
+      l.status,
+      l.perlu_turun_lapangan ? "Ya" : l.perlu_turun_lapangan === false ? "Tidak" : "Belum"
+    ]);
+    exportToPDF("Laporan TirtaBantu", columns, rows, "Data_Laporan_TirtaBantu");
   };
 
   return (
     <div>
-      <h1 className="text-sky-900 mb-1" style={{ fontSize: "1.5rem", fontWeight: 700 }}>Kelola Laporan</h1>
-      <p className="text-slate-500 mb-6" style={{ fontSize: "0.85rem" }}>Validasi, tinjau kebutuhan turun lapangan, dan kelola seluruh laporan</p>
+      <div className="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-4">
+        <div>
+          <h1 className="text-sky-900 mb-1" style={{ fontSize: "1.5rem", fontWeight: 700 }}>Kelola Laporan</h1>
+          <p className="text-slate-500" style={{ fontSize: "0.85rem" }}>Validasi, tinjau kebutuhan turun lapangan, dan kelola seluruh laporan</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors" style={{ fontSize: "0.85rem" }}>
+            <FileDown className="w-4 h-4" /> Export Excel
+          </button>
+          <button onClick={handleExportPDF} className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors" style={{ fontSize: "0.85rem" }}>
+            <FileText className="w-4 h-4" /> Export PDF
+          </button>
+        </div>
+      </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl p-4 border border-sky-100 shadow-sm mb-6">
@@ -283,38 +325,12 @@ export function Reports() {
 
       {/* Assign Modal */}
       {showAssignModal && (
-        <Modal onClose={() => setShowAssignModal(null)} title="Tugaskan Petugas Lapangan">
-          <p className="text-slate-500 mb-4" style={{ fontSize: "0.85rem" }}>
-            Pilih petugas untuk menangani laporan #{showAssignModal}
-          </p>
-          {(() => {
-            const l = data.find(x => x.id === showAssignModal)!;
-            return (
-              <div className="bg-sky-50 rounded-lg p-3 mb-4" style={{ fontSize: "0.83rem" }}>
-                <p className="text-sky-700" style={{ fontWeight: 600 }}>Lokasi: {l.alamat_lengkap} No. {l.no_rumah}</p>
-                <p className="text-slate-500">{l.rt_rw}, {l.kelurahan}, {l.kecamatan}</p>
-              </div>
-            );
-          })()}
-          <div className="space-y-2">
-            {petugasList.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => handleAssign(showAssignModal, p.id)}
-                className="w-full flex items-center gap-3 p-3 rounded-lg border border-sky-200 hover:bg-sky-50 hover:border-sky-300 transition-all text-left"
-              >
-                <div className="w-10 h-10 bg-sky-100 rounded-full flex items-center justify-center text-sky-700" style={{ fontWeight: 600 }}>
-                  {p.nama.charAt(0)}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sky-800" style={{ fontSize: "0.9rem", fontWeight: 500 }}>{p.nama}</p>
-                  <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>{p.email} | {p.telepon}</p>
-                </div>
-                <UserPlus className="w-4 h-4 text-sky-400" />
-              </button>
-            ))}
-          </div>
-        </Modal>
+        <PenugasanModal
+          laporan={data.find(x => x.id === showAssignModal)!}
+          petugasList={petugasList}
+          onAssign={handleAssign}
+          onClose={() => setShowAssignModal(null)}
+        />
       )}
     </div>
   );
@@ -326,6 +342,113 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>{label}</p>
       <p className="text-slate-800">{value}</p>
     </div>
+  );
+}
+
+function PenugasanModal({
+  laporan,
+  petugasList,
+  onAssign,
+  onClose,
+}: {
+  laporan: Laporan;
+  petugasList: User[];
+  onAssign: (laporanId: number, petugasId: number, catatan: string) => void;
+  onClose: () => void;
+}) {
+  const [selectedPetugas, setSelectedPetugas] = useState<number | null>(null);
+  const [catatan, setCatatan] = useState("");
+
+  // Urutkan petugas yang area kerjanya sama dengan kecamatan laporan agar berada di atas
+  const sortedPetugas = [...petugasList].sort((a, b) => {
+    const aMatch = a.area_kerja === laporan.kecamatan ? 1 : 0;
+    const bMatch = b.area_kerja === laporan.kecamatan ? 1 : 0;
+    return bMatch - aMatch;
+  });
+
+  const handleSubmit = () => {
+    if (selectedPetugas) {
+      onAssign(laporan.id, selectedPetugas, catatan);
+    }
+  };
+
+  return (
+    <Modal onClose={onClose} title={`Buat Work Order #${laporan.id}`}>
+      <div className="space-y-4" style={{ fontSize: "0.85rem" }}>
+        {/* Info Lokasi */}
+        <div className="bg-sky-50 rounded-xl p-4 border border-sky-100">
+          <p className="text-sky-700 mb-1 flex items-center gap-2" style={{ fontWeight: 600 }}>
+            <MapPin className="w-4 h-4" /> Area Penugasan
+          </p>
+          <p className="text-slate-800">{laporan.alamat_lengkap} No. {laporan.no_rumah}</p>
+          <p className="text-slate-600">{laporan.rt_rw}, Kel. {laporan.kelurahan}, <span className="font-semibold text-sky-800">Kec. {laporan.kecamatan}</span></p>
+        </div>
+
+        {/* Pilih Petugas */}
+        <div>
+          <label className="text-sky-800 mb-2 block" style={{ fontWeight: 600 }}>Pilih Petugas Lapangan</label>
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+            {sortedPetugas.map((p) => {
+              const isMatchArea = p.area_kerja === laporan.kecamatan;
+              const isSelected = selectedPetugas === p.id;
+              
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPetugas(p.id)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
+                    isSelected ? "bg-sky-100 border-sky-400 ring-1 ring-sky-400" : "bg-white border-slate-200 hover:border-sky-300"
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${isMatchArea ? "bg-emerald-500" : "bg-slate-400"}`} style={{ fontWeight: 600 }}>
+                    {p.nama.charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-slate-800" style={{ fontSize: "0.9rem", fontWeight: 600 }}>{p.nama}</p>
+                    <p className="text-slate-500" style={{ fontSize: "0.75rem" }}>
+                      Area: {p.area_kerja || "Belum ditentukan"}
+                    </p>
+                  </div>
+                  {isMatchArea && (
+                    <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full" style={{ fontSize: "0.7rem", fontWeight: 600 }}>
+                      Sesuai Area
+                    </span>
+                  )}
+                  {isSelected && <CheckCircle className="w-5 h-5 text-sky-600" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Catatan Penugasan / Work Order */}
+        <div>
+          <label className="text-sky-800 mb-1.5 flex items-center gap-2" style={{ fontWeight: 600 }}>
+            <ClipboardList className="w-4 h-4" /> Catatan Work Order (Opsional)
+          </label>
+          <textarea
+            value={catatan}
+            onChange={(e) => setCatatan(e.target.value)}
+            placeholder="Tulis instruksi khusus atau detail material yang harus dibawa..."
+            className="w-full px-3 py-2 border border-sky-200 rounded-lg bg-sky-50/50 focus:outline-none focus:ring-2 focus:ring-sky-300 h-20 resize-none"
+            style={{ fontSize: "0.85rem" }}
+          />
+        </div>
+
+        {/* Action */}
+        <button
+          onClick={handleSubmit}
+          disabled={!selectedPetugas}
+          className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 transition-colors ${
+            selectedPetugas ? "bg-sky-600 hover:bg-sky-700 text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed"
+          }`}
+          style={{ fontWeight: 600 }}
+        >
+          <UserPlus className="w-4 h-4" />
+          Tugaskan Sekarang
+        </button>
+      </div>
+    </Modal>
   );
 }
 

@@ -11,6 +11,7 @@ export interface User {
   role: Role;
   telepon: string;
   avatar?: string;
+  area_kerja?: string; // Khusus untuk petugas (e.g., Kecamatan)
 }
 
 export interface KategoriLaporan {
@@ -110,11 +111,11 @@ export const kategoriList: KategoriLaporan[] = [
 
 export const userList: User[] = [
   { id: 1, nama: "Admin Utama", email: "admin@tirtabantu.id", role: "admin", telepon: "08111222333" },
-  { id: 2, nama: "Budi Hartono", email: "budi@tirtabantu.id", role: "petugas", telepon: "08222333444" },
-  { id: 3, nama: "Siti Aminah", email: "siti@tirtabantu.id", role: "petugas", telepon: "08333444555" },
+  { id: 2, nama: "Budi Hartono", email: "budi@tirtabantu.id", role: "petugas", telepon: "08222333444", area_kerja: "Cianjur" },
+  { id: 3, nama: "Siti Aminah", email: "siti@tirtabantu.id", role: "petugas", telepon: "08333444555", area_kerja: "Cibadak" },
   { id: 4, nama: "Andi Pratama", email: "andi@gmail.com", role: "masyarakat", telepon: "08444555666" },
   { id: 5, nama: "Dewi Lestari", email: "dewi@gmail.com", role: "masyarakat", telepon: "08555666777" },
-  { id: 6, nama: "Rudi Setiawan", email: "rudi@tirtabantu.id", role: "petugas", telepon: "08666777888" },
+  { id: 6, nama: "Rudi Setiawan", email: "rudi@tirtabantu.id", role: "petugas", telepon: "08666777888", area_kerja: "Sumedang" },
   { id: 7, nama: "Nur Halimah", email: "nur@gmail.com", role: "masyarakat", telepon: "08777888999" },
 ];
 
