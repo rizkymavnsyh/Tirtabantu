@@ -71,17 +71,29 @@ export function Sidebar() {
           </div>
           <span className="text-white tracking-wide" style={{ fontSize: "1.2rem", fontWeight: 700 }}>TirtaBantu</span>
         </div>
-        <div className="bg-white/10 rounded-lg p-3">
+        <div 
+          onClick={() => {
+            navigate("/app/profil");
+            setOpen(false);
+          }}
+          className="bg-white/10 rounded-lg p-3 cursor-pointer hover:bg-white/15 transition-colors group"
+          title="Edit Profil"
+        >
           <div className="flex items-center gap-3">
-            {user.avatar ? (
-              <img src={user.avatar} alt={user.nama} className="w-9 h-9 rounded-full object-cover shadow-sm border border-white/20" />
-            ) : (
-              <div className="w-9 h-9 bg-sky-400/30 rounded-full flex items-center justify-center text-white" style={{ fontWeight: 600, fontSize: "0.85rem" }}>
-                {user.nama.charAt(0)}
+            <div className="relative inline-block shrink-0">
+              {user.avatar ? (
+                <img src={user.avatar} alt={user.nama} className="w-9 h-9 rounded-full object-cover shadow-sm border border-white/20 group-hover:border-white/40 transition-colors" />
+              ) : (
+                <div className="w-9 h-9 bg-sky-400/30 rounded-full flex items-center justify-center text-white group-hover:bg-sky-400/40 transition-colors" style={{ fontWeight: 600, fontSize: "0.85rem" }}>
+                  {user.nama.charAt(0)}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <User className="w-4 h-4 text-white" />
               </div>
-            )}
+            </div>
             <div className="min-w-0">
-              <p className="text-white/90 truncate" style={{ fontSize: "0.85rem", fontWeight: 500 }}>{user.nama}</p>
+              <p className="text-white/90 truncate group-hover:text-white transition-colors" style={{ fontSize: "0.85rem", fontWeight: 500 }}>{user.nama}</p>
               <p className="text-sky-300 mt-0.5" style={{ fontSize: "0.7rem" }}>{roleLabel}</p>
             </div>
           </div>
