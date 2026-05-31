@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, FileText, Tag, Users, ClipboardList, PlusCircle, History,
   Megaphone, Bell, LogOut, Droplets, BarChart3, Menu, X, CreditCard, Map,
-  CheckCircle2, Info, AlertCircle, User
+  CheckCircle2, Info, AlertCircle, User, BellOff, Trash2, Wrench
 } from "lucide-react";
 import { useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
@@ -11,7 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 
 export function Sidebar() {
-  const { user, logout, notifications, unreadCount, markAsRead, markAllAsRead } = useAuth();
+  const { user, logout, notifications, unreadCount, markAsRead, markAllAsRead, deleteUserNotification, clearAllUserNotifications } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -31,6 +31,7 @@ export function Sidebar() {
     { to: "/app/pembayaran-admin", label: "Kelola Pembayaran", icon: CreditCard },
     { to: "/app/kinerja", label: "Kinerja Petugas", icon: BarChart3 },
     { to: "/app/pengumuman", label: "Pengumuman", icon: Megaphone },
+    { to: "/app/notifikasi-admin", label: "Manajemen Notifikasi", icon: Bell },
   ];
 
   const petugasLinks = [
@@ -57,7 +58,7 @@ export function Sidebar() {
     switch (type) {
       case "payment_needed": return <AlertCircle className="w-4 h-4 text-orange-500" />;
       case "payment_proof": return <CreditCard className="w-4 h-4 text-emerald-500" />;
-      case "new_task": return <ClipboardList className="w-4 h-4 text-sky-500" />;
+      case "new_task": return <Wrench className="w-4 h-4 text-sky-500" />;
       default: return <Info className="w-4 h-4 text-blue-500" />;
     }
   };
@@ -161,61 +162,108 @@ export function Sidebar() {
               align="end"
             >
               <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <h3 className="font-semibold text-gray-800 text-sm">Notifikasi Sistem</h3>
-                {unreadCount > 0 && (
-                  <button 
-                    onClick={() => markAllAsRead()}
-                    className="text-xs text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Tandai semua dibaca
-                  </button>
-                )}
+                <h3 
+                  className="font-semibold text-gray-800 text-sm hover:text-sky-600 cursor-pointer transition-colors"
+                  onClick={() => {
+                    navigate("/app/notifikasi");
+                    setOpen(false);
+                  }}
+                >
+                  Notifikasi
+                </h3>
+                <div className="flex gap-3">
+                  {unreadCount > 0 && (
+                    <button 
+                      onClick={() => markAllAsRead()}
+                      className="text-[11px] text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1"
+                    >
+                      <CheckCircle2 className="w-3 h-3" /> Tandai semua dibaca
+                    </button>
+                  )}
+                  {notifications.length > 0 && (
+                    <button 
+                      onClick={() => clearAllUserNotifications()}
+                      className="text-[11px] text-red-500 hover:text-red-600 font-medium flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> Bersihkan Semua
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="max-h-[350px] overflow-y-auto">
                 {notifications.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500 text-sm">
-                    <Bell className="w-8 h-8 mx-auto text-gray-300 mb-2" />
-                    Belum ada notifikasi
+                  <div className="p-8 text-center text-gray-400 text-sm flex flex-col items-center justify-center h-full">
+                    <BellOff className="w-12 h-12 mb-3 text-gray-300" />
+                    Belum ada notifikasi baru
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-50">
                     {notifications.map((notif) => (
                       <div 
                         key={notif.id} 
-                        className={`p-3 transition-colors hover:bg-gray-50 flex gap-3 ${!notif.read ? 'bg-sky-50/30' : ''}`}
-                        onClick={() => {
+                        className={`p-3 transition-colors hover:bg-gray-50 flex gap-3 group relative ${!notif.read ? 'bg-sky-50/30' : ''}`}
+                      >
+                        <div className="mt-0.5 shrink-0" onClick={() => {
                           if (!notif.read) markAsRead(notif.id);
                           if (notif.link) {
                             navigate(notif.link);
                             setOpen(false);
                           }
-                        }}
-                      >
-                        <div className="mt-0.5 shrink-0">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${!notif.read ? 'bg-white shadow-sm' : 'bg-gray-100'}`}>
+                        }}>
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center ${!notif.read ? 'bg-white shadow-sm border border-sky-100' : 'bg-gray-100'}`}>
                             {getNotificationIcon(notif.type)}
                           </div>
                         </div>
-                        <div className="flex-1 cursor-pointer">
+                        <div className="flex-1 cursor-pointer pr-6" onClick={() => {
+                          if (!notif.read) markAsRead(notif.id);
+                          if (notif.link) {
+                            navigate(notif.link);
+                            setOpen(false);
+                          }
+                        }}>
                           <div className="flex justify-between items-start mb-0.5">
-                            <h4 className={`text-sm ${!notif.read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                            <h4 className={`text-sm leading-tight ${!notif.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
                               {notif.title}
                             </h4>
-                            <span className="text-[10px] text-gray-400 whitespace-nowrap ml-2">
-                              {formatDistanceToNow(new Date(notif.date), { addSuffix: true, locale: id })}
-                            </span>
                           </div>
-                          <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed text-gray-500">
                             {notif.message}
                           </p>
+                          <span className="text-[10px] text-gray-400 block mt-1">
+                            {formatDistanceToNow(new Date(notif.date), { addSuffix: true, locale: id })}
+                          </span>
                         </div>
+                        
+                        {/* Hover Delete Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteUserNotification(notif.id);
+                          }}
+                          className="absolute right-2 top-2 p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                          title="Hapus notifikasi"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        
                         {!notif.read && (
-                          <div className="w-2 h-2 bg-sky-500 rounded-full mt-1.5 shrink-0" />
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-sky-500 rounded-r-md" />
                         )}
                       </div>
                     ))}
                   </div>
                 )}
+              </div>
+              <div className="p-3 border-t border-gray-100 bg-gray-50/50">
+                <button
+                  onClick={() => {
+                    navigate("/app/notifikasi");
+                    setOpen(false);
+                  }}
+                  className="w-full text-center text-sm font-medium text-sky-600 hover:text-sky-700 py-1.5 transition-colors"
+                >
+                  Lihat Semua Notifikasi
+                </button>
               </div>
             </Popover.Content>
           </Popover.Portal>

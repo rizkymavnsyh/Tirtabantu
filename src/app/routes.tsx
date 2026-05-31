@@ -9,6 +9,7 @@ import { MasterKategori } from "./pages/admin/MasterKategori";
 import { ManajemenPengguna } from "./pages/admin/ManajemenPengguna";
 import { KinerjaPetugas } from "./pages/admin/KinerjaPetugas";
 import { PengumumanAdmin } from "./pages/admin/Pengumuman";
+import { ManajemenNotifikasi } from "./pages/admin/ManajemenNotifikasi";
 import { PembayaranAdmin } from "./pages/admin/PembayaranAdmin";
 import { BuatLaporan } from "./pages/user/BuatLaporan";
 import { RiwayatLaporan } from "./pages/user/RiwayatLaporan";
@@ -16,6 +17,7 @@ import { PembayaranUser } from "./pages/user/Pembayaran";
 import { DaftarTugas } from "./pages/petugas/DaftarTugas";
 import { AuthProvider } from "./context/AuthContext";
 import { Profile } from "./pages/Profile";
+import { Notifikasi } from "./pages/Notifikasi";
 
 function RootLayout() {
   return (
@@ -50,6 +52,7 @@ export const router = createBrowserRouter([
           { path: "pembayaran-admin", Component: PembayaranAdmin },
           { path: "kinerja", Component: KinerjaPetugas },
           { path: "pengumuman", Component: PengumumanAdmin },
+          { path: "notifikasi-admin", Component: ManajemenNotifikasi },
           // User routes
           { path: "buat-laporan", Component: BuatLaporan },
           { path: "riwayat", Component: RiwayatLaporan },
@@ -58,6 +61,7 @@ export const router = createBrowserRouter([
           { path: "tugas", Component: DaftarTugas },
           // General routes
           { path: "profil", Component: Profile },
+          { path: "notifikasi", Component: Notifikasi },
         ],
       },
     ],

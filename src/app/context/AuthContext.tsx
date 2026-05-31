@@ -1,15 +1,32 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from "react";
 import { User, userList } from "../data/mockData";
 import { toast } from "sonner";
 
-export interface AppNotification {
+export interface SystemNotification {
   id: string;
   title: string;
   message: string;
-  type: "payment_needed" | "payment_proof" | "new_task" | "info";
-  read: boolean;
+  type: "payment_needed" | "payment_proof" | "new_task" | "info" | "system";
   date: string;
   link?: string;
+  targetRole: "all" | "admin" | "petugas" | "masyarakat";
+}
+
+export interface UserNotificationReadState {
+  userId: number;
+  notificationId: string;
+}
+
+const initialMockNotifications: SystemNotification[] = [
+  { id: "sys-1", title: "Pembaruan Sistem v2.0", message: "Sistem telah diperbarui. Silakan cek fitur terbaru kami.", type: "system", date: new Date(Date.now() - 86400000).toISOString(), targetRole: "all" },
+  { id: "adm-1", title: "Bukti Pembayaran Baru", message: "Andi Pratama mengunggah bukti pembayaran untuk Laporan #1005.", type: "payment_proof", date: new Date().toISOString(), link: "/app/pembayaran-admin", targetRole: "admin" },
+  { id: "adm-2", title: "Laporan Baru", message: "Laporan #1011 butuh validasi segera.", type: "info", date: new Date().toISOString(), link: "/app/laporan", targetRole: "admin" },
+  { id: "pet-1", title: "Pengecekan Rutin", message: "Harap lakukan pengecekan instalasi di area masing-masing.", type: "new_task", date: new Date().toISOString(), link: "/app/tugas", targetRole: "petugas" },
+  { id: "mas-1", title: "Tips Hemat Air", message: "Matikan keran saat tidak digunakan untuk menghemat persediaan air bersih.", type: "info", date: new Date().toISOString(), targetRole: "masyarakat" },
+];
+
+export interface AppNotification extends SystemNotification {
+  read: boolean;
 }
 
 interface AuthContextType {
@@ -17,72 +34,120 @@ interface AuthContextType {
   login: (email: string, password: string) => boolean;
   logout: () => void;
   updateProfile: (data: Partial<User>) => void;
-  notifications: AppNotification[];
+  
+  // Notification States
+  notifications: AppNotification[]; // Current user's notifications
   unreadCount: number;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
+  deleteUserNotification: (id: string) => void;
+  clearAllUserNotifications: () => void;
+  
+  // Admin Notification CRUD
+  allSystemNotifications: SystemNotification[];
+  addSystemNotification: (notif: Omit<SystemNotification, "id" | "date">) => void;
+  updateSystemNotification: (id: string, notif: Partial<SystemNotification>) => void;
+  deleteSystemNotification: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [systemNotifications, setSystemNotifications] = useState<SystemNotification[]>(initialMockNotifications);
+  const [readStates, setReadStates] = useState<UserNotificationReadState[]>([]);
+  const [deletedStates, setDeletedStates] = useState<{userId: number, notificationId: string}[]>([]);
+  const [notifiedToasts, setNotifiedToasts] = useState<Set<string>>(new Set());
 
-  // Generate role-based mock notifications on login
-  useEffect(() => {
-    if (!user) {
-      setNotifications([]);
-      return;
-    }
-
-    const mockNotifs: AppNotification[] = [];
+  // Get current user's notifications based on targetRole
+  const notifications = useMemo(() => {
+    if (!user) return [];
     
-    if (user.role === "admin") {
-      mockNotifs.push({
-        id: "1", title: "Bukti Pembayaran Baru", message: "Andi Pratama mengunggah bukti pembayaran untuk Laporan #1005.", type: "payment_proof", read: false, date: new Date().toISOString(), link: "/app/pembayaran-admin"
-      });
-      mockNotifs.push({
-        id: "2", title: "Laporan Baru", message: "Laporan #1011 butuh validasi segera.", type: "info", read: false, date: new Date().toISOString(), link: "/app/laporan"
-      });
-    } else if (user.role === "petugas") {
-      mockNotifs.push({
-        id: "3", title: "Tugas Baru", message: "Anda ditugaskan ke Laporan #1006 (Pipa Tersumbat) di Jl. Raya Sumedang.", type: "new_task", read: false, date: new Date().toISOString(), link: "/app/tugas"
-      });
-    } else if (user.role === "masyarakat") {
-      mockNotifs.push({
-        id: "4", title: "Tagihan Pembayaran", message: "Laporan #1006 (Pipa Tersumbat) menunggu pembayaran Anda sebesar Rp 100.000.", type: "payment_needed", read: false, date: new Date().toISOString(), link: "/app/pembayaran"
-      });
-      mockNotifs.push({
-        id: "5", title: "Laporan Selesai", message: "Laporan #1001 Anda telah selesai dikerjakan.", type: "info", read: false, date: new Date().toISOString(), link: "/app/riwayat"
-      });
-    }
-
-    setNotifications(mockNotifs);
-
-    // Simulate arriving alerts shortly after login
-    mockNotifs.forEach((notif, index) => {
-      setTimeout(() => {
-        toast(notif.title, {
-          description: notif.message,
-          action: notif.link ? {
-            label: "Lihat",
-            onClick: () => { window.location.href = notif.link!; }
-          } : undefined
-        });
-      }, 1000 + (index * 1500)); // Stagger toasts
-    });
-
-  }, [user]);
+    return systemNotifications
+      .filter(n => n.targetRole === "all" || n.targetRole === user.role)
+      .filter(n => !deletedStates.some(ds => ds.userId === user.id && ds.notificationId === n.id))
+      .map(n => ({
+        ...n,
+        read: readStates.some(rs => rs.userId === user.id && rs.notificationId === n.id)
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [user, systemNotifications, readStates, deletedStates]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  // Show toasts for new unread notifications
+  useEffect(() => {
+    if (!user) return;
+    
+    const unread = notifications.filter(n => !n.read && !notifiedToasts.has(n.id));
+    
+    if (unread.length > 0) {
+      unread.forEach((notif, index) => {
+        setTimeout(() => {
+          toast(notif.title, {
+            description: notif.message,
+            action: notif.link ? {
+              label: "Lihat",
+              onClick: () => { window.location.href = notif.link!; }
+            } : undefined
+          });
+          setNotifiedToasts(prev => new Set(prev).add(notif.id));
+        }, 1000 + (index * 1500));
+      });
+    }
+  }, [notifications, user, notifiedToasts]);
+
   const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    if (!user) return;
+    if (!readStates.some(rs => rs.userId === user.id && rs.notificationId === id)) {
+      setReadStates(prev => [...prev, { userId: user.id, notificationId: id }]);
+    }
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    if (!user) return;
+    
+    const newReadStates = [...readStates];
+    notifications.forEach(n => {
+      if (!n.read) {
+        newReadStates.push({ userId: user.id, notificationId: n.id });
+      }
+    });
+    setReadStates(newReadStates);
+  };
+
+  const deleteUserNotification = (id: string) => {
+    if (!user) return;
+    setDeletedStates(prev => [...prev, { userId: user.id, notificationId: id }]);
+  };
+
+  const clearAllUserNotifications = () => {
+    if (!user) return;
+    const newDeletedStates = [...deletedStates];
+    notifications.forEach(n => {
+      newDeletedStates.push({ userId: user.id, notificationId: n.id });
+    });
+    setDeletedStates(newDeletedStates);
+  };
+
+  // CRUD for Admin
+  const addSystemNotification = (notif: Omit<SystemNotification, "id" | "date">) => {
+    const newNotif: SystemNotification = {
+      ...notif,
+      id: "sys-" + Date.now().toString(),
+      date: new Date().toISOString()
+    };
+    setSystemNotifications(prev => [newNotif, ...prev]);
+  };
+
+  const updateSystemNotification = (id: string, updatedFields: Partial<SystemNotification>) => {
+    setSystemNotifications(prev => prev.map(n => n.id === id ? { ...n, ...updatedFields } : n));
+  };
+
+  const deleteSystemNotification = (id: string) => {
+    setSystemNotifications(prev => prev.filter(n => n.id !== id));
+    // Also cleanup read states
+    setReadStates(prev => prev.filter(rs => rs.notificationId !== id));
   };
 
   const login = (email: string, _password: string) => {
@@ -105,7 +170,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateProfile, notifications, unreadCount, markAsRead, markAllAsRead }}>
+    <AuthContext.Provider value={{ 
+      user, login, logout, updateProfile, 
+      notifications, unreadCount, markAsRead, markAllAsRead,
+      deleteUserNotification, clearAllUserNotifications,
+      allSystemNotifications: systemNotifications,
+      addSystemNotification, updateSystemNotification, deleteSystemNotification
+    }}>
       {children}
     </AuthContext.Provider>
   );
